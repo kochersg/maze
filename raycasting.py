@@ -10,7 +10,7 @@ class RayCasting:
         ox, oy = self.game.player.pos
         x_map, y_map = self.game.player.map_pos
         ray_angle = self.game.player.angle - settings.HALF_FOV + 0.0001
-        for _ in range (settings.NUM_RAYS):
+        for ray in range (settings.NUM_RAYS):
             sin_a = math.sin(ray_angle)
             cos_a = math.cos(ray_angle)
             # horizontals
@@ -18,13 +18,32 @@ class RayCasting:
             # verticals
             depth_vert = self.ray_cast_vertical(ox, oy,x_map, sin_a, cos_a)
             depth = min(depth_vert, depth_hor)
+
+            # remove fishbowl effect
+            depth *= math.cos(self.game.player.angle - ray_angle) 
             
-            pg.draw.line(
+            # pg.draw.line(
+            #     surface=self.game.screen,
+            #     color='yellow',
+            #     start_pos=(100*ox,100*oy),
+            #     end_pos=(100*(ox+depth*cos_a), 100*(oy+depth*sin_a)),
+            #     width=2,
+            # )
+
+            # projection
+            proj_height = settings.SCREEN_DIST / (depth + 0.0001) 
+            # draw walls
+
+            wall_color = [230 / (1+depth**5*0.0003)] * 3
+            pg.draw.rect(
                 surface=self.game.screen,
-                color='yellow',
-                start_pos=(100*ox,100*oy),
-                end_pos=(100*(ox+depth*cos_a), 100*(oy+depth*sin_a)),
-                width=2,
+                color = wall_color,
+                rect=(
+                    ray*settings.SCALE, 
+                    settings.HALF_HEIGHT - proj_height // 2,
+                    settings.SCALE,
+                    proj_height
+                )
             )
 
             ray_angle += settings.DELTA_ANGLE
@@ -50,9 +69,9 @@ class RayCasting:
     def ray_cast_horizontal(self, ox: float, oy: float, y_map:int, sin_a: float, cos_a: float)->float:
         y_hor, dy = (y_map+1, 1) if sin_a>0 else (y_map-1E-6, -1)
         depth_hor = (y_hor-oy)/sin_a
-        x_hor = ox + depth_hor * cos_a
-        delta_depth = dy / sin_a
-        dx = delta_depth * cos_a
+        x_hor = ox + depth_hor*cos_a
+        delta_depth = dy/sin_a
+        dx = delta_depth*cos_a
         return self.calc_depth(x_hor, y_hor, dx, dy, depth_hor, delta_depth)
 
 
