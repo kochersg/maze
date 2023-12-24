@@ -2,6 +2,7 @@ import pygame as pg
 import settings as settings
 import map as map
 import raycasting as raycasting
+import object_renderer as object_renderer
 import player as player
 import sys
 
@@ -16,6 +17,7 @@ class Game:
     def new_game(self):
         self.map = map.Map(game=self)
         self.player = player.Player(game=self)
+        self.object_renderer = object_renderer.ObjectRenderer(game=self)
         self.raycasting = raycasting.RayCasting(game=self)
 
     def update(self):
@@ -27,6 +29,7 @@ class Game:
     
     def draw(self):
         self.screen.fill(color='black')
+        self.object_renderer.draw()
         # self.map.draw()
         # self.player.draw()
 
