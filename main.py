@@ -1,6 +1,7 @@
 import pygame as pg
 import settings as settings
 import map as map
+import raycasting as raycasting
 import player as player
 import sys
 
@@ -15,9 +16,11 @@ class Game:
     def new_game(self):
         self.map = map.Map(game=self)
         self.player = player.Player(game=self)
+        self.raycasting = raycasting.RayCasting(game=self)
 
     def update(self):
         self.player.update()
+        self.raycasting.update()
         pg.display.flip()
         self.delta_time = self.clock.tick(settings.FPS)
         pg.display.set_caption(title = f'MY MAZE, framerate: {self.clock.get_fps():0.1f}')
