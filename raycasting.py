@@ -36,22 +36,48 @@ class RayCasting:
         x_map, y_map = self.game.player.map_pos
         ray_angle = self.game.player.angle - settings.HALF_FOV + 0.0001
         for ray in range (settings.NUM_RAYS):
+            texture_hor, texture_vert = 1, 1
             sin_a = math.sin(ray_angle)
             cos_a = math.cos(ray_angle)
             # horizontals
-            depth_hor, texture_hor, x_hor = self.ray_cast_horizontal(ox, oy, y_map, sin_a, cos_a)
+            y_hor, dy = (y_map+1, 1) if sin_a>0 else (y_map-1E-6, -1)
+            depth_hor = (y_hor - oy)/sin_a
+            x_hor = ox + depth_hor * cos_a
+            delta_depth = dy/sin_a
+            dx = delta_depth*cos_a
+            for _ in range(settings.MAX_DEPTH):
+                tile = int(x_hor), int(y_hor)
+                if tile in self.game.map.world_map:
+                    texture_hor = self.game.map.world_map[tile]
+                    break
+                x_hor += dx
+                y_hor += dy
+                depth_hor += delta_depth
+
             # verticals
-            depth_vert, texture_vert, y_vert = self.ray_cast_vertical(ox, oy, x_map, sin_a, cos_a)
+            x_vert, dx = (x_map+1,  1) if cos_a>0 else (x_map-1E-6, -1)
+            depth_vert = (x_vert - ox)/cos_a
+            y_vert = oy + depth_vert * sin_a
+            delta_depth = dx/cos_a
+            dy = delta_depth*sin_a
+            for _ in range(settings.MAX_DEPTH):
+                tile = int(x_vert), int(y_vert)
+                texture_vert = 1
+                if tile in self.game.map.world_map:
+                    texture_vert = self.game.map.world_map[tile]
+                    break
+                x_vert += dx
+                y_vert += dy
+                depth_vert += delta_depth
+
             if depth_vert < depth_hor:
-                depth = depth_vert
-                texture = texture_vert
+                depth, texture = depth_vert, texture_vert
                 y_vert %= 1
                 offset = y_vert if cos_a > 0 else (1 - y_vert)
             else:
-                depth = depth_hor
-                texture = texture_hor
+                depth, texture = depth_hor, texture_hor
                 x_hor %= 1
-                offset = (1-x_hor) if sin_a > 0 else x_hor
+                offset = (1 - x_hor) if sin_a > 0 else x_hor
 
             # remove fishbowl effect
             depth *= math.cos(self.game.player.angle - ray_angle) 
@@ -64,38 +90,6 @@ class RayCasting:
             self.ray_casting_result.append((depth, proj_height, texture, offset))
 
             ray_angle += settings.DELTA_ANGLE
-
-    def calc_depth(self, x:float, y:float, dx: float, dy:float, depth: float, delta_depth:float) -> float:
-        for _ in range(settings.MAX_DEPTH):
-            tile = int(x), int(y)
-            texture = 1
-            if tile in self.game.map.world_map:
-                texture = self.game.map.world_map[tile]
-                break
-            x += dx
-            y += dy
-            depth += delta_depth
-
-        return depth, texture
-
-    def ray_cast_vertical(self, ox:int, oy:int, x_map: int, sin_a: float, cos_a: float)->float:
-        x_vert, dx = (x_map+1,  1) if cos_a>0 else (x_map-1E-6, -1)
-        depth_vert = (x_vert - ox)/cos_a
-        y_vert = oy + depth_vert * sin_a
-        delta_depth = dx/cos_a
-        dy = delta_depth*sin_a
-        depth, texture = self.calc_depth(x_vert, y_vert, dx, dy, depth_vert, delta_depth)
-        return depth, texture, y_vert
-
-    def ray_cast_horizontal(self, ox: float, oy: float, y_map:int, sin_a: float, cos_a: float)->float:
-        y_hor, dy = (y_map+1, 1) if sin_a>0 else (y_map-1E-6, -1)
-        depth_hor = (y_hor - oy)/sin_a
-        x_hor = ox + depth_hor * cos_a
-        delta_depth = dy/sin_a
-        dx = delta_depth*cos_a
-        depth, texture = self.calc_depth(x_hor, y_hor, dx, dy, depth_hor, delta_depth)
-        return depth, texture, x_hor
-
 
     def update(self):
         self.ray_cast()
